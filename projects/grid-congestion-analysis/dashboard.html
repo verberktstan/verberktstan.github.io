@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dutch Grid Congestion Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-primary-dark: #2563eb;
+            --color-primary-light: #3b82f6;
+            --color-primary-lighter: #60a5fa;
+            --color-accent-red: #ef4444;
+            --color-accent-purple: #a78bfa;
+            --color-text-body: #1e293b;
+            --color-text-dark: #475569;
+            --color-text-medium: #64748b;
+            --color-text-light: #94a3b8;
+            --color-bg-light: #f0f9ff;
+            --color-bg-light-2: #e8f4f8;
+            --color-border-light: rgba(37, 99, 235, 0.15);
+            --color-border-blue: rgba(37, 99, 235, 0.2);
+            --color-border-blue-light: rgba(37, 99, 235, 0.3);
+            --color-bg-card: rgba(255, 255, 255, 0.9);
+            --color-bg-metric: rgba(59, 130, 246, 0.08);
+            --color-grid-light: rgba(37, 99, 235, 0.08);
+            --color-rank-gold: #fbbf24;
+            --color-rank-orange: #fb923c;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, var(--color-bg-light) 0%, var(--color-bg-light-2) 100%);
+            color: var(--color-text-body);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--color-text-medium);
+            font-size: 1.1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--color-bg-card);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15);
+        }
+
+        .card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--color-primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--color-primary-dark);
+            margin: 1rem 0;
+        }
+
+        .stat-label {
+            color: var(--color-text-medium);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th {
+            background: rgba(37, 99, 235, 0.1);
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 2px solid var(--color-border-blue);
+            color: var(--color-primary-dark);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+            font-size: 0.9rem;
+            color: var(--color-text-body);
+        }
+
+        tr:hover {
+            background: var(--color-bg-metric);
+        }
+
+        .rank {
+            color: var(--color-primary-dark);
+            font-weight: bold;
+            width: 2rem;
+        }
+
+        .rank-1 { color: var(--color-rank-gold); }
+        .rank-2 { color: var(--color-primary-dark); }
+        .rank-3 { color: var(--color-rank-orange); }
+
+        .sortable-header {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .sortable-header:hover {
+            background: rgba(37, 99, 235, 0.15);
+        }
+
+        .sort-indicator {
+            display: inline-block;
+            margin-left: 0.3rem;
+            font-size: 0.65rem;
+            color: var(--color-text-light);
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .sort-indicator::before {
+            content: '↕';
+        }
+
+        .sortable-header.sorted-asc .sort-indicator::before {
+            content: '▲';
+            color: var(--color-primary-dark);
+        }
+
+        .sortable-header.sorted-desc .sort-indicator::before {
+            content: '▼';
+            color: var(--color-primary-dark);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 1.5rem 0;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: var(--color-primary-dark);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-subtitle {
+            font-size: 0.95rem;
+            color: var(--color-text-medium);
+            margin-bottom: 1.5rem;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--color-primary-light);
+            margin: 0.5rem 0;
+        }
+
+        .stat-box-label {
+            color: var(--color-text-dark);
+            font-size: 0.85rem;
+        }
+
+        .highlight {
+            color: var(--color-primary-dark);
+            font-weight: bold;
+        }
+
+        .bar-chart-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .timeline-item {
+            display: grid;
+            grid-template-columns: 60px 1fr;
+            gap: 1rem;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .timeline-year {
+            font-weight: bold;
+            color: var(--color-primary-dark);
+            text-align: right;
+            padding-right: 1rem;
+            border-right: 2px solid rgba(96, 165, 250, 0.3);
+        }
+
+        .timeline-bar-container {
+            border-radius: 4px;
+            height: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .timeline-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-primary-lighter) 0%, var(--color-accent-purple) 50%, var(--color-accent-red) 100%);
+            background-repeat: no-repeat;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .timeline-count {
+            color: var(--color-text-medium);
+            font-size: 0.9rem;
+            margin-left: 0.5rem;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .metric {
+            background: var(--color-bg-metric);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--color-primary-light);
+        }
+
+        .metric-label {
+            color: var(--color-text-medium);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+
+        .emoji {
+            font-size: 1.2rem;
+            margin-right: 0.5rem;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 0.5rem;
+            display: inline-block;
+            vertical-align: -4px;
+        }
+
+        .icon svg {
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .popover-trigger {
+            position: relative;
+            cursor: help;
+            border-bottom: 1px dotted var(--color-primary-dark);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+
+        .popover {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--color-text-body);
+            color: white;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            width: 250px;
+            z-index: 1000;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            line-height: 1.4;
+        }
+
+        .popover::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: var(--color-text-body);
+        }
+
+        .popover-trigger:hover .popover,
+        .popover-trigger:focus-within .popover {
+            display: block;
+        }
+
+        .popover-label {
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+            color: var(--color-primary-lighter);
+        }
+
+        footer {
+            text-align: center;
+            color: var(--color-text-light);
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(59, 130, 246, 0.1);
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: var(--color-primary-dark);
+            text-decoration: none;
+            border-bottom: 1px solid var(--color-primary-dark);
+            transition: opacity 0.2s;
+        }
+
+        footer a:hover {
+            opacity: 0.7;
+        }
+
+        .chart-card {
+            background: var(--color-bg-card);
+            border: 1px solid var(--color-border-light);
+            border-radius: 12px;
+            padding: 1.5rem;
+            width: 50%;
+        }
+
+        details {
+            margin: 2rem 0;
+            border: 1px solid var(--color-border-light);
+            border-radius: 8px;
+            padding: 0;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        summary {
+            padding: 1.5rem;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: background 0.2s;
+            /* Style like .section-title (h2) */
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--color-primary-dark);
+        }
+
+        summary .icon {
+            width: 28px;
+            height: 28px;
+            margin-right: 0.5rem;
+            color: var(--color-primary-dark);
+        }
+
+        summary:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        details[open] summary {
+            border-bottom: 1px solid var(--color-border-light);
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        summary::before {
+            content: "▶";
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 0.8rem;
+            color: var(--color-primary-dark);
+            margin-right: 0.5rem;
+        }
+
+        details[open] summary::before {
+            transform: rotate(90deg);
+        }
+
+        /* Hide redundant h2 and subtitle inside collapsible sections */
+        details .section-title {
+            display: none;
+        }
+
+        details .section-subtitle {
+            display: none;
+        }
+
+        /* Subtitle in summary */
+        summary .subtitle {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 400;
+            color: var(--color-text-medium);
+            margin-top: 0.25rem;
+        }
+
+        details > * {
+            padding: 0 1.5rem 1.5rem 1.5rem;
+        }
+
+        details > summary {
+            padding: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .bar-chart-container {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .chart-card {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chart-card {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Grid Congestion Analysis</h1>
+            <p class="subtitle">Comprehensive metrics on electricity network bottlenecks and capacity challenges</p>
+        </header>
+
+        <!-- COVERAGE GAP ANALYSIS - FRONT AND CENTER -->
+        <div class="section">
+            <h2 class="section-title"><i class="icon" data-feather="target"></i>Coverage Gap Analysis</h2>
+            <p class="section-subtitle">Which top bottleneck areas have grid reinforcement projects covering them, and which remain unaddressed</p>
+
+            <!-- Coverage Statistics -->
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-box-label">Areas Analyzed</div>
+                    <div class="stat-box-value" id="areas-analyzed">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-box-label">With Reinforcement</div>
+                    <div class="stat-box-value" id="areas-covered" style="color: #10b981;">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-box-label">Without Reinforcement</div>
+                    <div class="stat-box-value" id="areas-uncovered" style="color: #ef4444;">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-box-label">Coverage Rate</div>
+                    <div class="stat-box-value" id="coverage-rate">-</div>
+                </div>
+            </div>
+
+            <!-- Coverage Table -->
+            <div class="grid">
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th><span class="popover-trigger">Bottleneck Area
+                                    <div class="popover">
+                                        <div class="popover-label">Generation-Heavy Areas</div>
+                                        Areas with significant generation capacity shortage, typically rural renewable energy hubs.<br/>
+                                        <strong>Meaning:</strong> These areas produce renewable power but lack transmission capacity to export to cities.
+                                    </div>
+                                </span></th>
+                                <th class="sortable-header" data-sort="generation_shortage_mw"><span class="popover-trigger">Generation Shortage (MW) <span class="sort-indicator"></span>
+                                    <div class="popover">
+                                        <div class="popover-label">Capacity Deficit</div>
+                                        The amount of additional generation export capacity needed during peak demand.<br/>
+                                        <strong>Meaning:</strong> How much grid expansion this area urgently needs.
+                                    </div>
+                                </span></th>
+                                <th class="sortable-header" data-sort="resolution_year"><span class="popover-trigger">Expected Fix Year <span class="sort-indicator"></span>
+                                    <div class="popover">
+                                        <div class="popover-label">Scheduled Completion</div>
+                                        The year grid reinforcement is expected to be completed.<br/>
+                                        <strong>Meaning:</strong> When this bottleneck should be resolved (if on schedule).
+                                    </div>
+                                </span></th>
+                                <th><span class="popover-trigger">Reinforcement Status
+                                    <div class="popover">
+                                        <div class="popover-label">Project Coverage</div>
+                                        Whether a grid reinforcement project is planned for this area.<br/>
+                                        <strong>Covered:</strong> A project is scheduled<br/>
+                                        <strong>Not Covered:</strong> No project planned (coverage gap)
+                                    </div>
+                                </span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="coverage-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- CRITICAL HOTSPOTS (COLLAPSIBLE) -->
+        <details>
+            <summary><i class="icon" data-feather="alert-circle" style="width: 18px; height: 18px; margin-right: 0.5rem;"></i><span>Bottleneck Areas<span class="subtitle">Top <strong>20 rural areas</strong> with <strong>renewable energy generation</strong> waiting to be exported but lacking <strong>grid capacity</strong></span></span></summary>
+            <div class="section">
+            <h2 class="section-title" style="margin-top: 0;"><i class="icon" data-feather="alert-circle"></i>Bottleneck Areas</h2>
+            <p class="section-subtitle">Top 20 rural areas with renewable energy generation waiting to be exported but lacking grid capacity</p>
+            <div class="grid">
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Area</th>
+                                <th class="sortable-header" data-sort="generation_shortage_mw"><span class="popover-trigger">Generation Shortage (MW) <span class="sort-indicator"></span>
+                                    <div class="popover">
+                                        <div class="popover-label">Generation Capacity Shortage</div>
+                                        <strong>What it shows:</strong> How much additional MW of generation export capacity this area needs.<br/>
+                                        <strong>Calculation:</strong> Needed capacity minus available capacity, summed across all postal codes.<br/>
+                                        <strong>Why it matters:</strong> Positive value = bottleneck for renewable energy injection.
+                                    </div>
+                                </span></th>
+                                <th class="sortable-header" data-sort="generation_queue"><span class="popover-trigger">Queue (Requests) <span class="sort-indicator"></span>
+                                    <div class="popover">
+                                        <div class="popover-label">Connection Requests Waiting</div>
+                                        <strong>What it shows:</strong> Number of unique generation businesses/farms waiting to connect.<br/>
+                                        <strong>Unit:</strong> Count of unique requests (people, farms, solar installers).<br/>
+                                        <strong>Why it matters:</strong> High queue = frustrated renewable energy projects delayed.
+                                    </div>
+                                </span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="hotspots-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+            </div>
+        </details>
+
+        <!-- DEMAND IMBALANCE (COLLAPSIBLE) -->
+        <details>
+            <summary><i class="icon" data-feather="bar-chart-2" style="width: 18px; height: 18px; margin-right: 0.5rem;"></i><span>Demand Imbalance<span class="subtitle">Insight into <strong>consumption vs generation</strong> request <strong>imbalance</strong></span></span></summary>
+            <div class="section">
+            <h2 class="section-title" style="margin-top: 0;"><i class="icon" data-feather="bar-chart-2"></i>Demand Imbalance: Consumption vs Generation</h2>
+            <p class="section-subtitle">2.4x more consumption requests than generation requests—cities need power imports while rural areas want to export renewables</p>
+            <!-- Connection Requests Section -->
+            <h3 style="color: var(--color-primary-dark); margin-bottom: 1rem; font-size: 1rem;">Connection Requests</h3>
+            <div class="stats-row">
+                        <div class="stat-box">
+                            <div class="stat-box-label"><span class="popover-trigger">Total Consumption Requests
+                                <div class="popover">
+                                    <div class="popover-label">Unique Consumption Requests</div>
+                                    <strong>What it shows:</strong> Total number of unique businesses, homes, industries wanting to buy/consume electricity.<br/>
+                                    <strong>Source:</strong> unieke_verzoeken_afname summed across all 463K postal codes.<br/>
+                                    <strong>Why it matters:</strong> Shows total demand for grid connections.
+                                </div>
+                            </span></div>
+                            <div class="stat-box-value" id="total-consumption" style="color: #60a5fa;">-</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-box-label"><span class="popover-trigger">Total Generation Requests
+                                <div class="popover">
+                                    <div class="popover-label">Unique Generation Requests</div>
+                                    <strong>What it shows:</strong> Total number of unique farms, solar installers, wind parks wanting to inject renewable energy.<br/>
+                                    <strong>Source:</strong> unieke_verzoeken_invoeding summed across all locations.<br/>
+                                    <strong>Why it matters:</strong> Shows renewable energy pipeline demand.
+                                </div>
+                            </span></div>
+                            <div class="stat-box-value" id="total-generation" style="color: #a78bfa;">-</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-box-label"><span class="popover-trigger">Consumption/Generation Ratio
+                                <div class="popover">
+                                    <div class="popover-label">Supply-Demand Imbalance</div>
+                                    <strong>What it shows:</strong> How many times more consumption requests than generation requests.<br/>
+                                    <strong>Interpretation:</strong> X:1 = for every 1 renewable project, there are X demand requests.<br/>
+                                    <strong>Why it matters:</strong> 2.4x imbalance reveals the grid is built for centralized generation, not distributed renewables.
+                                </div>
+                            </span></div>
+                            <div class="stat-box-value" id="ratio">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Request Volume Chart -->
+            <div style="display: flex; justify-content: center; margin: 2rem 0;">
+                <div class="chart-card">
+                    <h3 style="color: var(--color-primary-dark); margin-bottom: 1rem;">Request Volume Comparison</h3>
+                    <div class="chart-container">
+                        <canvas id="demand-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Waiting Queues Section -->
+            <h3 style="color: var(--color-primary-dark); margin: 1.5rem 0 1rem 0; font-size: 1rem;">Waiting Queues</h3>
+            <div class="stats-row">
+                        <div class="stat-box">
+                            <div class="stat-box-label"><span class="popover-trigger">Consumption Queue Total
+                                <div class="popover">
+                                    <div class="popover-label">Waiting to Consume</div>
+                                    <strong>What it shows:</strong> Total MW of power waiting to be consumed (demand backlog).<br/>
+                                    <strong>Unit:</strong> Megawatts (MW) at peak demand moment.<br/>
+                                    <strong>Why it matters:</strong> High values = grid can't deliver enough power to eager customers.
+                                </div>
+                            </span></div>
+                            <div class="stat-box-value" id="consumption-queue" style="color: #fb923c;">-</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-box-label"><span class="popover-trigger">Generation Queue Total
+                                <div class="popover">
+                                    <div class="popover-label">Waiting to Inject</div>
+                                    <strong>What it shows:</strong> Total MW of renewable power waiting to be injected/exported.<br/>
+                                    <strong>Unit:</strong> Megawatts (MW) at peak generation moment.<br/>
+                                    <strong>Why it matters:</strong> High values = grid can't absorb renewable generation; curtailment risk.
+                                </div>
+                            </span></div>
+                            <div class="stat-box-value" id="generation-queue" style="color: #f97316;">-</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-box-label"><span class="popover-trigger">Queue Imbalance
+                                <div class="popover">
+                                    <div class="popover-label">Demand vs Supply Queue Ratio</div>
+                                    <strong>What it shows:</strong> How many times more power is waiting to be consumed vs. waiting to be injected.<br/>
+                                    <strong>Interpretation:</strong> X:1 = demand queues are X times larger than supply queues.<br/>
+                                    <strong>Why it matters:</strong> Shows whether grid bottleneck is on demand or supply side.
+                                </div>
+                            </span></div>
+                            <div class="stat-box-value" id="queue-ratio">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Queue Waiting Chart -->
+            <div style="display: flex; justify-content: center; margin: 2rem 0;">
+                <div class="chart-card">
+                    <h3 style="color: var(--color-primary-dark); margin-bottom: 1rem;">Queue Waiting Comparison</h3>
+                    <div class="chart-container">
+                        <canvas id="queue-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            </div>
+        </details>
+
+        <!-- GEOGRAPHIC PATTERN (COLLAPSIBLE) -->
+        <details>
+            <summary><i class="icon" data-feather="map" style="width: 18px; height: 18px; margin-right: 0.5rem;"></i><span>Geographic Pattern<span class="subtitle">Top <strong>consumption-heavy</strong> and <strong>generation-heavy</strong> areas showing spatial distribution of grid stress</span></span></summary>
+            <div class="section">
+            <h2 class="section-title" style="margin-top: 0;"><i class="icon" data-feather="map"></i>Geographic Pattern: Consumption vs Generation Heavy Areas</h2>
+            <p class="section-subtitle">Extreme geographic mismatch: 507 rural generation-heavy areas vs 55 urban consumption-heavy areas reveals grid infrastructure built for centralized generation</p>
+
+            <div class="metric-grid">
+                <div class="metric">
+                    <div class="metric-label"><span class="popover-trigger">Consumption-Heavy Areas
+                        <div class="popover">
+                            <div class="popover-label">Urban/Industrial Zones</div>
+                            Areas where power DEMAND exceeds generation capacity. Typically cities, data centers, industry needing more import capacity.<br/>
+                            <strong>Count:</strong> Number of feeding areas classified as consumption-heavy.
+                        </div>
+                    </span></div>
+                    <div class="metric-value" id="consumption-areas">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label"><span class="popover-trigger">Generation-Heavy Areas
+                        <div class="popover">
+                            <div class="popover-label">Rural/Agricultural Zones</div>
+                            Areas where renewable GENERATION exceeds local demand. Typically rural farms, solar/wind parks needing more export capacity.<br/>
+                            <strong>Count:</strong> Number of feeding areas classified as generation-heavy.
+                        </div>
+                    </span></div>
+                    <div class="metric-value" id="generation-areas">-</div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <h2><i class="icon" data-feather="layers"></i>Top 10 Consumption-Heavy</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Area</th>
+                                <th><span class="popover-trigger">Shortage (MW)
+                                    <div class="popover">
+                                        <div class="popover-label">Consumption Deficit</div>
+                                        Total MW of import capacity this area needs to satisfy all consumption requests.<br/>
+                                        <strong>Calculated:</strong> Needed capacity minus available, summed across area.
+                                    </div>
+                                </span></th>
+                                <th><span class="popover-trigger">Requests
+                                    <div class="popover">
+                                        <div class="popover-label">Unique Consumption Requests</div>
+                                        Count of businesses/homes wanting to consume power in this area.<br/>
+                                        <strong>Unit:</strong> Number of unique connection requests.
+                                    </div>
+                                </span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="consumption-heavy-body">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card">
+                    <h2><i class="icon" data-feather="zap"></i>Top 10 Generation-Heavy</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Area</th>
+                                <th><span class="popover-trigger">Shortage (MW)
+                                    <div class="popover">
+                                        <div class="popover-label">Generation Export Deficit</div>
+                                        Total MW of export capacity this area needs to accept all generation.<br/>
+                                        <strong>Calculated:</strong> Needed capacity minus available, summed across area.
+                                    </div>
+                                </span></th>
+                                <th><span class="popover-trigger">Requests
+                                    <div class="popover">
+                                        <div class="popover-label">Unique Generation Requests</div>
+                                        Count of farms/installers wanting to generate renewable power in this area.<br/>
+                                        <strong>Unit:</strong> Number of unique connection requests.
+                                    </div>
+                                </span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="generation-heavy-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+            </div>
+        </details>
+
+        <!-- RESOLUTION TIMELINE (COLLAPSIBLE) -->
+        <details>
+            <summary><i class="icon" data-feather="calendar" style="width: 18px; height: 18px; margin-right: 0.5rem;"></i><span>Grid Reinforcement Schedule<span class="subtitle">Planned projects scheduled 2026-2035 with <strong>peak demand 2029-2031</strong></span></span></summary>
+            <div class="section">
+            <h2 class="section-title" style="margin-top: 0;"><i class="icon" data-feather="calendar"></i>Grid Reinforcement Schedule</h2>
+            <p class="section-subtitle">Grid reinforcement projects scheduled: 56K+ consumption locations planned for 2026 resolution, peak construction 2029-2031 with 47K-50K locations finishing per year</p>
+
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-box-label"><span class="popover-trigger">Consumption Projects Planned for 2026
+                        <div class="popover">
+                            <div class="popover-label">Reinforcement Completion Schedule</div>
+                            Number of consumption congestion locations where grid upgrades are SCHEDULED to be completed in 2026.<br/>
+                            <strong>What this means:</strong> These projects have congestion problems and are planned to be fixed by 2026. Delays = extended congestion.
+                        </div>
+                    </span></div>
+                    <div class="stat-box-value" id="fixes-2026-consumption">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-box-label"><span class="popover-trigger">Generation Projects Planned for 2026
+                        <div class="popover">
+                            <div class="popover-label">Renewable Integration Schedule</div>
+                            Number of generation congestion locations where grid upgrades are SCHEDULED to be completed in 2026.<br/>
+                            <strong>What this means:</strong> These areas have renewable projects waiting. Delays = renewable energy curtailment.
+                        </div>
+                    </span></div>
+                    <div class="stat-box-value" id="fixes-2026-generation">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-box-label"><span class="popover-trigger">Peak Year (Consumption)
+                        <div class="popover">
+                            <div class="popover-label">Highest Investment Demand</div>
+                            The year with the most consumption grid reinforcement projects scheduled.<br/>
+                            <strong>What it means:</strong> All 3 DSOs will be stretched to capacity this year.
+                        </div>
+                    </span></div>
+                    <div class="stat-box-value" id="peak-year-consumption">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-box-label"><span class="popover-trigger">Peak Year (Generation)
+                        <div class="popover">
+                            <div class="popover-label">Highest Renewable Pipeline</div>
+                            The year with the most generation grid reinforcement projects scheduled.<br/>
+                            <strong>What it means:</strong> Massive renewable energy integration wave incoming.
+                        </div>
+                    </span></div>
+                    <div class="stat-box-value" id="peak-year-generation">-</div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <h2>Consumption Resolution Timeline</h2>
+                    <div id="timeline-consumption"></div>
+                </div>
+                <div class="card">
+                    <h2>Generation Resolution Timeline</h2>
+                    <div id="timeline-generation"></div>
+                </div>
+            </div>
+        </div>
+
+            </div>
+        </details>
+
+        <!-- NETWORK OPERATORS (COLLAPSIBLE) -->
+        <details>
+            <summary><i class="icon" data-feather="grid" style="width: 18px; height: 18px; margin-right: 0.5rem;"></i><span>Network Operators<span class="subtitle"><strong>Distribution System Operators</strong> (DSOs) coverage areas sorted by <strong>total shortage</strong></span></span></summary>
+            <div class="section">
+            <h2 class="section-title" style="margin-top: 0;"><i class="icon" data-feather="grid"></i>Network Operators (DSOs): Sorted by Coverage</h2>
+            <p class="section-subtitle">3 distribution system operators (Liander, Enexis, Stedin) control 99.5% of Dutch grid—no redundancy creates systemic single-point-of-failure risk</p>
+            <div class="grid">
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th><span class="popover-trigger">DSO
+                                    <div class="popover">
+                                        <div class="popover-label">Distribution System Operator</div>
+                                        Regional utility company managing local power distribution grid (NOT transmission). Only 3 operate in Netherlands.<br/>
+                                        <strong>Risk:</strong> No redundancy - single point of failure per region.
+                                    </div>
+                                </span></th>
+                                <th><span class="popover-trigger">Locations
+                                    <div class="popover">
+                                        <div class="popover-label">Coverage Area</div>
+                                        Number of 6-digit postal codes (geographic locations) this DSO operates.<br/>
+                                        <strong>Context:</strong> Netherlands has ~463K postal codes total.
+                                    </div>
+                                </span></th>
+                                <th><span class="popover-trigger">Total Shortage (MW)
+                                    <div class="popover">
+                                        <div class="popover-label">Combined Capacity Deficit</div>
+                                        Sum of consumption + generation capacity shortage across this DSO's entire territory.<br/>
+                                        <strong>Meaning:</strong> How much grid investment this DSO urgently needs.
+                                    </div>
+                                </span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="dso-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            </div>
+        </details>
+
+        <footer>
+            <p>📊 Data source: <a href="https://capaciteitskaart.netbeheernederland.nl/info/algemene-info" target="_blank">Netbeheer Nederland Capaciteitskaart</a> | Last update: November 14, 2026</p>
+            <p>Coverage: 462,940 postal codes across 562 feeding areas and 12 provinces | Network Operators: Liander, Enexis, Stedin, TenneT</p>
+            <p>&copy; 2026 <a href="mailto:verberktstan@gmail.com">Stan Verberkt</a> — Grid congestion analysis & visualization</p>
+        </footer>
+    </div>
+
+    <script>
+        // Global state for coverage gap sorting
+        let currentCoverageData = null;
+        let currentSort = { field: null, direction: 'asc' };
+
+        // Global state for hotspots sorting
+        let currentHotspotsData = null;
+        let currentHotspotsSort = { field: null, direction: 'asc' };
+
+        // Load and process data
+        function loadData() {
+                const data = {"critical_hotspots":[{"rank":1,"area":"ZYV Zeijerveen","generation_shortage_mw":137.42,"consumption_shortage_mw":33.33,"generation_queue":21180.76,"consumption_queue":6936.51},{"rank":2,"area":"Rilland ","generation_shortage_mw":130.17,"consumption_shortage_mw":null,"generation_queue":1102.3,"consumption_queue":98.19},{"rank":3,"area":"Noordring (Schouwen-Duiveland en Tholen)","generation_shortage_mw":39.43,"consumption_shortage_mw":null,"generation_queue":13139.64,"consumption_queue":11685.76},{"rank":4,"area":"Hoeksche Waard & Zuidelijk Dordrecht","generation_shortage_mw":36.69,"consumption_shortage_mw":0.0,"generation_queue":35419.76,"consumption_queue":103612.03},{"rank":5,"area":"MZ Maarheeze","generation_shortage_mw":24.47,"consumption_shortage_mw":0.0,"generation_queue":162330.76,"consumption_queue":75197.01},{"rank":6,"area":"OS ULFT 20-3i","generation_shortage_mw":22.0,"consumption_shortage_mw":0.0,"generation_queue":29714.82,"consumption_queue":17039.81},{"rank":7,"area":"Houten-Oost","generation_shortage_mw":19.8,"consumption_shortage_mw":null,"generation_queue":0.0,"consumption_queue":0.0},{"rank":8,"area":"Wijk bij Duurstede","generation_shortage_mw":18.04,"consumption_shortage_mw":null,"generation_queue":585.34,"consumption_queue":953.12},{"rank":9,"area":"ARI Aarle Rixtel","generation_shortage_mw":14.18,"consumption_shortage_mw":0.0,"generation_queue":122497.61,"consumption_queue":85589.94},{"rank":10,"area":"OS ZEVENHUIZEN 10-2i","generation_shortage_mw":13.0,"consumption_shortage_mw":0.0,"generation_queue":355.05,"consumption_queue":550.79},{"rank":11,"area":"OS WARMENHUIZEN 10-1i","generation_shortage_mw":11.0,"consumption_shortage_mw":0.0,"generation_queue":9643.09,"consumption_queue":18023.69},{"rank":12,"area":"Bleiswijk - Bergschenhoek","generation_shortage_mw":8.71,"consumption_shortage_mw":null,"generation_queue":1096.15,"consumption_queue":444.4},{"rank":13,"area":"Pijnacker - De Boezem","generation_shortage_mw":7.54,"consumption_shortage_mw":null,"generation_queue":0.0,"consumption_queue":0.0},{"rank":14,"area":"Nootdorp en Ypenburg-Oost","generation_shortage_mw":7.02,"consumption_shortage_mw":0.0,"generation_queue":625.62,"consumption_queue":2005.0},{"rank":15,"area":"OS BERGUM CENTRALE 10-2i","generation_shortage_mw":7.0,"consumption_shortage_mw":15.0,"generation_queue":5081.63,"consumption_queue":3351.64},{"rank":16,"area":"Waddinxveen","generation_shortage_mw":6.2,"consumption_shortage_mw":null,"generation_queue":8645.76,"consumption_queue":3525.84},{"rank":17,"area":"Waddinxveen - Doelwijk","generation_shortage_mw":5.99,"consumption_shortage_mw":null,"generation_queue":84.06,"consumption_queue":0.0},{"rank":18,"area":"KELP Kelpen","generation_shortage_mw":5.57,"consumption_shortage_mw":0.0,"generation_queue":1182.96,"consumption_queue":3985.33},{"rank":19,"area":"Waddinxveen - Piet Stuurmanweg","generation_shortage_mw":5.17,"consumption_shortage_mw":null,"generation_queue":48.03,"consumption_queue":39.18},{"rank":20,"area":"VO Veenoord","generation_shortage_mw":5.11,"consumption_shortage_mw":0.0,"generation_queue":13898.25,"consumption_queue":10766.92}],"demand_imbalance":{"total_consumption_requests":31115732.0,"total_generation_requests":12727043.0,"ratio_consumption_to_generation":2.444851643857886,"avg_consumption_requests_per_location":67.74701987620104,"avg_generation_requests_per_location":31.732959829654398,"consumption_queue_total":9885090.5698,"generation_queue_total":7740186.491,"consumption_max_queue":155.951,"generation_max_queue":345.1},"geographic_pattern":{"consumption_heavy":[{"rank":1,"area":"Dordrecht Centrum en Oost","shortage_mw":27069.0,"requests":149524.0},{"rank":2,"area":"Langeland","shortage_mw":26064.50000000001,"requests":135400.0},{"rank":3,"area":"HMZ Helmond Zuid","shortage_mw":21286.32618761211,"requests":530620.0},{"rank":4,"area":"GNHK Groningen v. Heemskerckstraat","shortage_mw":21077.329863737792,"requests":67140.0},{"rank":5,"area":"OS SLOTERMEER 10-1i","shortage_mw":20712.0,"requests":20712.0},{"rank":6,"area":"OS ALMERE 10-1i","shortage_mw":18056.0,"requests":97051.0},{"rank":7,"area":"OS BERGUM CENTRALE 10-2i","shortage_mw":16935.0,"requests":16935.0},{"rank":8,"area":"EHVW Eindhoven West","shortage_mw":15986.597575360496,"requests":311664.0},{"rank":9,"area":"OS DRACHTEN 10-1i","shortage_mw":15309.0,"requests":39123.0},{"rank":10,"area":"OS DALE 10-1i","shortage_mw":14003.0,"requests":87837.0}],"generation_heavy":[{"rank":1,"area":"ZYV Zeijerveen","shortage_mw":178374.1343581436,"requests":23364.0},{"rank":2,"area":"Hoeksche Waard & Zuidelijk Dordrecht","shortage_mw":80210.89800000003,"requests":118044.0},{"rank":3,"area":"Rilland ","shortage_mw":39570.76799999999,"requests":1520.0},{"rank":4,"area":"MZ Maarheeze","shortage_mw":31855.491649593125,"requests":50778.0},{"rank":5,"area":"Noordring (Schouwen-Duiveland en Tholen)","shortage_mw":29963.760000000002,"requests":15200.0},{"rank":6,"area":"ARI Aarle Rixtel","shortage_mw":24871.92272441099,"requests":103486.0},{"rank":7,"area":"OS WARMENHUIZEN 10-1i","shortage_mw":10582.0,"requests":26936.0},{"rank":8,"area":"Wijk bij Duurstede","shortage_mw":9346.791999999998,"requests":5180.0},{"rank":9,"area":"OS ULFT 20-3i","shortage_mw":5302.0,"requests":3615.0},{"rank":10,"area":"Waddinxveen","shortage_mw":4463.999999999999,"requests":19440.0}],"total_consumption_heavy_areas":55,"total_generation_heavy_areas":507},"resolution_timeline":{"immediate_fixes_2026_consumption":56440,"immediate_fixes_2026_generation":63906,"consumption_timeline":[{"year":2026,"locations":56440},{"year":2027,"locations":17971},{"year":2028,"locations":23074},{"year":2029,"locations":47427},{"year":2030,"locations":34677},{"year":2031,"locations":40480},{"year":2032,"locations":26999},{"year":2033,"locations":12106},{"year":2034,"locations":18478},{"year":2035,"locations":12179}],"generation_timeline":[{"year":2026,"locations":63906},{"year":2027,"locations":14460},{"year":2028,"locations":17033},{"year":2029,"locations":26331},{"year":2030,"locations":18690},{"year":2031,"locations":17282},{"year":2032,"locations":17237},{"year":2033,"locations":7255},{"year":2034,"locations":3723},{"year":2035,"locations":3961}],"peak_year_consumption":2026,"peak_locations_consumption":56440,"peak_year_generation":2026,"peak_locations_generation":63906},"network_operators":[{"rank":1,"dso":"Liander","locations":177624,"consumption_shortage_mw":184951.0,"generation_shortage_mw":26649.0,"total_shortage_mw":211600.0,"consumption_requests":5914471.0,"generation_requests":3113395.0},{"rank":2,"dso":"Enexis","locations":155955,"consumption_shortage_mw":104705.0,"generation_shortage_mw":245034.0,"total_shortage_mw":349739.0,"consumption_requests":14247810.0,"generation_requests":8002883.0},{"rank":3,"dso":"Stedin","locations":117098,"consumption_shortage_mw":101323.0,"generation_shortage_mw":175963.0,"total_shortage_mw":277286.0,"consumption_requests":10611806.0,"generation_requests":815311.0},{"rank":4,"dso":"Coteq, Enexis","locations":5374,"consumption_shortage_mw":0.0,"generation_shortage_mw":0.0,"total_shortage_mw":0.0,"consumption_requests":221435.0,"generation_requests":187716.0},{"rank":5,"dso":"Enexis, Rendo","locations":3502,"consumption_shortage_mw":0.0,"generation_shortage_mw":0.0,"total_shortage_mw":0.0,"consumption_requests":120210.0,"generation_requests":100552.0},{"rank":6,"dso":"Westland","locations":3351,"consumption_shortage_mw":0.0,"generation_shortage_mw":0.0,"total_shortage_mw":0.0,"consumption_requests":0.0,"generation_requests":507186.0}],"coverage_gap":{"top_bottleneck_areas":[{"area":"ZYV Zeijerveen","generation_shortage_mw":137.42229149317689,"generation_requests":23364.0,"queue_mw":21180.764000000003,"has_reinforcement":false,"resolution_year":null,"coverage_status":"Not Covered"},{"area":"Rilland ","generation_shortage_mw":130.16699999999997,"generation_requests":1520.0,"queue_mw":1102.3039999999999,"has_reinforcement":true,"resolution_year":2031,"coverage_status":"Covered"},{"area":"Noordring (Schouwen-Duiveland en Tholen)","generation_shortage_mw":39.426,"generation_requests":15200.0,"queue_mw":13139.640000000001,"has_reinforcement":true,"resolution_year":2030,"coverage_status":"Covered"},{"area":"Hoeksche Waard & Zuidelijk Dordrecht","generation_shortage_mw":36.69300000000001,"generation_requests":118044.0,"queue_mw":35419.758,"has_reinforcement":true,"resolution_year":2029,"coverage_status":"Covered"},{"area":"MZ Maarheeze","generation_shortage_mw":24.466583448228207,"generation_requests":50778.0,"queue_mw":162330.756,"has_reinforcement":false,"resolution_year":null,"coverage_status":"Not Covered"},{"area":"OS ULFT 20-3i","generation_shortage_mw":22.0,"generation_requests":3615.0,"queue_mw":29714.818,"has_reinforcement":true,"resolution_year":2034,"coverage_status":"Covered"},{"area":"Houten-Oost","generation_shortage_mw":19.799999999999997,"generation_requests":4.0,"queue_mw":0.0,"has_reinforcement":true,"resolution_year":2035,"coverage_status":"Covered"},{"area":"Wijk bij Duurstede","generation_shortage_mw":18.043999999999997,"generation_requests":5180.0,"queue_mw":585.3399999999999,"has_reinforcement":true,"resolution_year":2030,"coverage_status":"Covered"},{"area":"ARI Aarle Rixtel","generation_shortage_mw":14.1801155783415,"generation_requests":103486.0,"queue_mw":122497.606,"has_reinforcement":true,"resolution_year":2031,"coverage_status":"Covered"},{"area":"OS ZEVENHUIZEN 10-2i","generation_shortage_mw":13.0,"generation_requests":1350.0,"queue_mw":355.05,"has_reinforcement":true,"resolution_year":2027,"coverage_status":"Covered"},{"area":"OS WARMENHUIZEN 10-1i","generation_shortage_mw":11.0,"generation_requests":26936.0,"queue_mw":9643.088,"has_reinforcement":true,"resolution_year":2032,"coverage_status":"Covered"},{"area":"Bleiswijk - Bergschenhoek","generation_shortage_mw":8.712000000000003,"generation_requests":3025.0,"queue_mw":1096.15,"has_reinforcement":true,"resolution_year":2028,"coverage_status":"Covered"},{"area":"Pijnacker - De Boezem","generation_shortage_mw":7.543,"generation_requests":0.0,"queue_mw":0.0,"has_reinforcement":false,"resolution_year":null,"coverage_status":"Not Covered"},{"area":"Nootdorp en Ypenburg-Oost","generation_shortage_mw":7.0219999999999985,"generation_requests":3125.0,"queue_mw":625.6249999999999,"has_reinforcement":true,"resolution_year":2027,"coverage_status":"Covered"},{"area":"OS BERGUM CENTRALE 10-2i","generation_shortage_mw":7.0,"generation_requests":29354.0,"queue_mw":5081.629000000001,"has_reinforcement":true,"resolution_year":2028,"coverage_status":"Covered"},{"area":"Waddinxveen","generation_shortage_mw":6.199999999999998,"generation_requests":19440.0,"queue_mw":8645.76,"has_reinforcement":true,"resolution_year":2026,"coverage_status":"Covered"},{"area":"Waddinxveen - Doelwijk","generation_shortage_mw":5.991,"generation_requests":182.0,"queue_mw":84.056,"has_reinforcement":true,"resolution_year":2026,"coverage_status":"Covered"},{"area":"KELP Kelpen","generation_shortage_mw":5.570000100000001,"generation_requests":7794.0,"queue_mw":1182.9560000000001,"has_reinforcement":true,"resolution_year":2033,"coverage_status":"Covered"},{"area":"Waddinxveen - Piet Stuurmanweg","generation_shortage_mw":5.17,"generation_requests":112.0,"queue_mw":48.032,"has_reinforcement":true,"resolution_year":2026,"coverage_status":"Covered"},{"area":"VO Veenoord","generation_shortage_mw":5.1089750777966785,"generation_requests":14850.0,"queue_mw":13898.25,"has_reinforcement":true,"resolution_year":2031,"coverage_status":"Covered"},{"area":"HGLB Hengelo Bolderhoek","generation_shortage_mw":4.4595457385004025,"generation_requests":10982.0,"queue_mw":16427.78,"has_reinforcement":true,"resolution_year":2028,"coverage_status":"Covered"},{"area":"Walcheren Noord ","generation_shortage_mw":4.300000000000001,"generation_requests":0.0,"queue_mw":0.0,"has_reinforcement":true,"resolution_year":2028,"coverage_status":"Covered"},{"area":"Zuidplas","generation_shortage_mw":2.9960000000000004,"generation_requests":40.0,"queue_mw":0.0,"has_reinforcement":true,"resolution_year":2026,"coverage_status":"Covered"},{"area":"Stompwijk en Leidschendam-Zuid","generation_shortage_mw":2.9,"generation_requests":262.0,"queue_mw":0.0,"has_reinforcement":true,"resolution_year":2030,"coverage_status":"Covered"},{"area":"Berkel en Rodenrijs; Kleihoogt; Centrum Noord","generation_shortage_mw":1.6999999999999993,"generation_requests":0.0,"queue_mw":0.0,"has_reinforcement":true,"resolution_year":2028,"coverage_status":"Covered"},{"area":"OMD Ommen Dante","generation_shortage_mw":1.612408099999989,"generation_requests":19214.0,"queue_mw":3684.654,"has_reinforcement":true,"resolution_year":2028,"coverage_status":"Covered"},{"area":"OS OOSTERWOLDE 10-1i","generation_shortage_mw":1.0,"generation_requests":26245.0,"queue_mw":4097.839999999999,"has_reinforcement":true,"resolution_year":2033,"coverage_status":"Covered"},{"area":"OS SCHAGEN 10-4i","generation_shortage_mw":1.0,"generation_requests":0.0,"queue_mw":0.0,"has_reinforcement":false,"resolution_year":null,"coverage_status":"Not Covered"},{"area":"Berkel en Rodenrijs - Noordeinde ","generation_shortage_mw":0.8000000000000043,"generation_requests":0.0,"queue_mw":0.0,"has_reinforcement":true,"resolution_year":2032,"coverage_status":"Covered"},{"area":"VVL10 Vierverlaten","generation_shortage_mw":0.0,"generation_requests":124293.0,"queue_mw":60301.227,"has_reinforcement":true,"resolution_year":2026,"coverage_status":"Covered"}],"areas_with_reinforcement":26,"areas_without_reinforcement":4,"total_analyzed_areas":30,"coverage_percentage":86.7}};
+
+                populateCriticalHotspots(data.critical_hotspots);
+                populateDemandImbalance(data.demand_imbalance);
+                populateGeographicPattern(data.geographic_pattern);
+                populateResolutionTimeline(data.resolution_timeline);
+                populateNetworkOperators(data.network_operators);
+                populateCoverageGap(data.coverage_gap);
+        }
+
+        function populateCriticalHotspots(hotspots) {
+            currentHotspotsData = hotspots;
+
+            // Set default sort to generation_shortage descending
+            currentHotspotsSort.field = 'generation_shortage_mw';
+            currentHotspotsSort.direction = 'desc';
+
+            renderHotspotsTable(hotspots);
+            initHotspotsSortHandlers();
+            updateHotspotsSortIndicators();
+        }
+
+        function renderHotspotsTable(hotspots) {
+            const tbody = document.getElementById('hotspots-body');
+            tbody.innerHTML = '';
+            hotspots.forEach((item) => {
+                const row = `<tr>
+                    <td>${item.area}</td>
+                    <td>${item.generation_shortage_mw.toFixed(1)}</td>
+                    <td>${Math.round(item.generation_queue).toLocaleString()}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function sortHotspotsData(field) {
+            if (!currentHotspotsData) return;
+
+            const data = [...currentHotspotsData];
+
+            // Toggle direction if same field clicked
+            if (currentHotspotsSort.field === field) {
+                currentHotspotsSort.direction = currentHotspotsSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentHotspotsSort.field = field;
+                // Start descending for shortage (highest first), descending for queue (highest first)
+                currentHotspotsSort.direction = 'desc';
+            }
+
+            // Sort
+            data.sort((a, b) => {
+                let aVal = a[field];
+                let bVal = b[field];
+
+                if (currentHotspotsSort.direction === 'asc') {
+                    return aVal - bVal;
+                } else {
+                    return bVal - aVal;
+                }
+            });
+
+            renderHotspotsTable(data);
+            updateHotspotsSortIndicators();
+        }
+
+        function updateHotspotsSortIndicators() {
+            const table = document.getElementById('hotspots-body').closest('table');
+            table.querySelectorAll('.sortable-header').forEach(header => {
+                header.classList.remove('sorted-asc', 'sorted-desc');
+                if (header.dataset.sort === currentHotspotsSort.field) {
+                    header.classList.add(`sorted-${currentHotspotsSort.direction}`);
+                }
+            });
+        }
+
+        function initHotspotsSortHandlers() {
+            const table = document.getElementById('hotspots-body').closest('table');
+            table.querySelectorAll('.sortable-header').forEach(header => {
+                header.removeEventListener('click', sortHotspotsHeaderClick);
+                header.addEventListener('click', sortHotspotsHeaderClick);
+            });
+        }
+
+        function sortHotspotsHeaderClick(e) {
+            const header = e.currentTarget;
+            sortHotspotsData(header.dataset.sort);
+        }
+
+        function populateDemandImbalance(data) {
+            document.getElementById('total-consumption').textContent =
+                (data.total_consumption_requests / 1e6).toFixed(1) + 'M';
+            document.getElementById('total-generation').textContent =
+                (data.total_generation_requests / 1e6).toFixed(1) + 'M';
+            document.getElementById('ratio').textContent =
+                data.ratio_consumption_to_generation.toFixed(2) + 'x';
+            document.getElementById('consumption-queue').textContent =
+                (data.consumption_queue_total / 1e6).toFixed(1) + 'M';
+            document.getElementById('generation-queue').textContent =
+                (data.generation_queue_total / 1e6).toFixed(1) + 'M';
+            document.getElementById('queue-ratio').textContent =
+                (data.consumption_queue_total / data.generation_queue_total).toFixed(2) + 'x';
+
+            // Charts
+            const ctx1 = document.getElementById('demand-chart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['Consumption', 'Generation'],
+                    datasets: [{
+                        label: 'Requests (Millions)',
+                        data: [data.total_consumption_requests / 1e6, data.total_generation_requests / 1e6],
+                        backgroundColor: ['#60a5fa', '#a78bfa'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: 'var(--color-text-dark)' } } },
+                    scales: {
+                        y: { ticks: { color: 'var(--color-text-dark)' }, grid: { color: 'var(--color-grid-light)' } },
+                        x: { ticks: { color: 'var(--color-text-dark)' }, grid: { color: 'var(--color-grid-light)' } }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('queue-chart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['Consumption', 'Generation'],
+                    datasets: [{
+                        label: 'Queue Total (Millions)',
+                        data: [data.consumption_queue_total / 1e6, data.generation_queue_total / 1e6],
+                        backgroundColor: ['#fb923c', '#f97316'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: 'var(--color-text-dark)' } } },
+                    scales: {
+                        y: { ticks: { color: 'var(--color-text-dark)' }, grid: { color: 'var(--color-grid-light)' } },
+                        x: { ticks: { color: 'var(--color-text-dark)' }, grid: { color: 'var(--color-grid-light)' } }
+                    }
+                }
+            });
+        }
+
+        function populateGeographicPattern(data) {
+            document.getElementById('consumption-areas').textContent = data.total_consumption_heavy_areas;
+            document.getElementById('generation-areas').textContent = data.total_generation_heavy_areas;
+
+            const consBody = document.getElementById('consumption-heavy-body');
+            data.consumption_heavy.forEach(item => {
+                const row = `<tr>
+                    <td class="rank rank-${Math.min(item.rank, 3)}">${item.rank}</td>
+                    <td>${item.area}</td>
+                    <td>${item.shortage_mw.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                    <td>${item.requests.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                </tr>`;
+                consBody.innerHTML += row;
+            });
+
+            const genBody = document.getElementById('generation-heavy-body');
+            data.generation_heavy.forEach(item => {
+                const row = `<tr>
+                    <td class="rank rank-${Math.min(item.rank, 3)}">${item.rank}</td>
+                    <td>${item.area}</td>
+                    <td>${item.shortage_mw.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                    <td>${item.requests.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                </tr>`;
+                genBody.innerHTML += row;
+            });
+        }
+
+        function populateResolutionTimeline(data) {
+            document.getElementById('fixes-2026-consumption').textContent =
+                data.immediate_fixes_2026_consumption.toLocaleString();
+            document.getElementById('fixes-2026-generation').textContent =
+                data.immediate_fixes_2026_generation.toLocaleString();
+            document.getElementById('peak-year-consumption').textContent = data.peak_year_consumption;
+            document.getElementById('peak-year-generation').textContent = data.peak_year_generation;
+
+            // Timeline HTML
+            const consTimeline = document.getElementById('timeline-consumption');
+            const maxConsumption = Math.max(...data.consumption_timeline.map(x => x.locations));
+            data.consumption_timeline.forEach(item => {
+                const width = (item.locations / maxConsumption) * 100;
+                const gradientSize = (maxConsumption / item.locations) * 100;
+                consTimeline.innerHTML += `
+                    <div class="timeline-item">
+                        <div class="timeline-year">${item.year}</div>
+                        <div>
+                            <div class="timeline-bar-container">
+                                <div class="timeline-bar" style="width: ${width}%; background-size: ${gradientSize}% 100%;"></div>
+                            </div>
+                            <div class="timeline-count">${item.locations.toLocaleString()} locations</div>
+                        </div>
+                    </div>`;
+            });
+
+            const genTimeline = document.getElementById('timeline-generation');
+            const maxGeneration = Math.max(...data.generation_timeline.map(x => x.locations));
+            data.generation_timeline.forEach(item => {
+                const width = (item.locations / maxGeneration) * 100;
+                const gradientSize = (maxGeneration / item.locations) * 100;
+                genTimeline.innerHTML += `
+                    <div class="timeline-item">
+                        <div class="timeline-year">${item.year}</div>
+                        <div>
+                            <div class="timeline-bar-container">
+                                <div class="timeline-bar" style="width: ${width}%; background-size: ${gradientSize}% 100%;"></div>
+                            </div>
+                            <div class="timeline-count">${item.locations.toLocaleString()} locations</div>
+                        </div>
+                    </div>`;
+            });
+
+            // Timeline chart
+        }
+
+        function populateNetworkOperators(dsos) {
+            const tbody = document.getElementById('dso-body');
+            dsos.forEach((dso, idx) => {
+                const row = `<tr>
+                    <td class="rank rank-${Math.min(idx + 1, 3)}">${dso.rank}</td>
+                    <td>${dso.dso}</td>
+                    <td>${dso.locations.toLocaleString()}</td>
+                    <td>${dso.total_shortage_mw.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function populateCoverageGap(coverageData) {
+            currentCoverageData = coverageData;
+
+            document.getElementById('areas-analyzed').textContent = coverageData.total_analyzed_areas;
+            document.getElementById('areas-covered').textContent = coverageData.areas_with_reinforcement;
+            document.getElementById('areas-uncovered').textContent = coverageData.areas_without_reinforcement;
+            document.getElementById('coverage-rate').textContent = coverageData.coverage_percentage + '%';
+
+            // Set default sort to generation_shortage descending
+            currentSort.field = 'generation_shortage_mw';
+            currentSort.direction = 'desc';
+
+            renderCoverageTable(coverageData.top_bottleneck_areas);
+            initCoverageSortHandlers();
+            updateSortIndicators();
+        }
+
+        function renderCoverageTable(areas) {
+            const tbody = document.getElementById('coverage-body');
+            tbody.innerHTML = '';
+            areas.forEach((item) => {
+                const statusBadge = item.has_reinforcement
+                    ? '<span style="color: #10b981; font-weight: bold;">✓ Covered</span>'
+                    : '<span style="color: #ef4444; font-weight: bold;">✗ Not Covered</span>';
+                const fixYear = item.resolution_year ? item.resolution_year : 'No Plan';
+
+                const row = `<tr>
+                    <td>${item.area}</td>
+                    <td>${item.generation_shortage_mw.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
+                    <td>${fixYear}</td>
+                    <td>${statusBadge}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function sortCoverageData(field) {
+            if (!currentCoverageData) return;
+
+            const data = [...currentCoverageData.top_bottleneck_areas];
+
+            // Toggle direction if same field clicked
+            if (currentSort.field === field) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.field = field;
+                // Start ascending for both fields
+                currentSort.direction = 'asc';
+            }
+
+            // Sort
+            data.sort((a, b) => {
+                let aVal = a[field];
+                let bVal = b[field];
+
+                // Handle null values
+                if (aVal === null) aVal = field === 'resolution_year' ? Infinity : -Infinity;
+                if (bVal === null) bVal = field === 'resolution_year' ? Infinity : -Infinity;
+
+                if (currentSort.direction === 'asc') {
+                    return aVal - bVal;
+                } else {
+                    return bVal - aVal;
+                }
+            });
+            renderCoverageTable(data);
+            updateSortIndicators();
+        }
+
+        function updateSortIndicators() {
+            const table = document.getElementById('coverage-body').closest('table');
+            table.querySelectorAll('.sortable-header').forEach(header => {
+                header.classList.remove('sorted-asc', 'sorted-desc');
+                if (header.dataset.sort === currentSort.field) {
+                    header.classList.add(`sorted-${currentSort.direction}`);
+                }
+            });
+        }
+
+        function initCoverageSortHandlers() {
+            const table = document.getElementById('coverage-body').closest('table');
+            table.querySelectorAll('.sortable-header').forEach(header => {
+                header.removeEventListener('click', sortCoverageHeaderClick);
+                header.addEventListener('click', sortCoverageHeaderClick);
+            });
+        }
+
+        function sortCoverageHeaderClick(e) {
+            const header = e.currentTarget;
+            sortCoverageData(header.dataset.sort);
+        }
+
+        // Initialize
+        loadData();
+
+        // Initialize Feather Icons
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    </script>
+</body>
+</html>

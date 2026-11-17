@@ -1,0 +1,395 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #333;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color: #e0e0e0;
+    background: #1a1a1a;
+  }
+  a { color: #81c9ff; }
+  a:visited { color: #b19cd9; }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  max-width: 768px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+header {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  header {
+    border-bottom-color: #444;
+  }
+}
+
+header h1 {
+  font-size: 1.5rem;
+}
+
+header a {
+  text-decoration: none;
+}
+
+main {
+  margin-bottom: 3rem;
+}
+
+article {
+  margin-bottom: 3rem;
+}
+
+article h1 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+article time {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+@media (prefers-color-scheme: dark) {
+  article time {
+    color: #999;
+  }
+}
+
+article .content {
+  margin-top: 1.5rem;
+  line-height: 1.8;
+}
+
+article .content h2 {
+  font-size: 1.4rem;
+  margin: 1.5rem 0 0.5rem 0;
+}
+
+article .content h3 {
+  font-size: 1.1rem;
+  margin: 1.2rem 0 0.3rem 0;
+}
+
+article .content p {
+  margin-bottom: 1rem;
+}
+
+article .content code {
+  background: #f4f4f4;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: "SFMono-Regular", Menlo, Monaco, monospace;
+  font-size: 0.9em;
+}
+
+@media (prefers-color-scheme: dark) {
+  article .content code {
+    background: #333;
+  }
+}
+
+article .content pre {
+  background: #f4f4f4;
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  article .content pre {
+    background: #2a2a2a;
+  }
+}
+
+article .content pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+article .content ul, article .content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+article .content li {
+  margin-bottom: 0.5rem;
+}
+
+article .content blockquote {
+  border-left: 4px solid #e0e0e0;
+  padding-left: 1rem;
+  margin-left: 0;
+  margin: 1rem 0;
+  color: #666;
+  font-style: italic;
+}
+
+@media (prefers-color-scheme: dark) {
+  article .content blockquote {
+    border-left-color: #444;
+    color: #999;
+  }
+}
+
+ul {
+  list-style: none;
+}
+
+ul li {
+  margin-bottom: 0.5rem;
+}
+
+ul li:before {
+  content: "→ ";
+  margin-right: 0.5rem;
+  color: #999;
+}
+
+footer {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 1rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+@media (prefers-color-scheme: dark) {
+  footer {
+    border-top-color: #444;
+    color: #999;
+  }
+}
+
+/* Portfolio additions */
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+header nav a {
+  margin-left: 1rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+main h2 {
+  font-size: 1.3rem;
+  margin: 2.5rem 0 1rem 0;
+}
+
+.about p {
+  margin-bottom: 1rem;
+  line-height: 1.8;
+}
+
+.skills {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.5rem;
+}
+
+.skills dt {
+  font-weight: 600;
+}
+
+ul.projects li.project {
+  margin-bottom: 1.75rem;
+}
+
+ul.projects li.project:before {
+  content: none;
+}
+
+ul.projects li.project > a {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.year {
+  margin-left: 0.75rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+ul.projects li.project p {
+  margin: 0.25rem 0 0.4rem 0;
+}
+
+ul.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+
+ul.tags li {
+  margin: 0;
+  padding: 0.1em 0.6em;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  font-family: "SFMono-Regular", Menlo, Monaco, monospace;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+ul.tags li:before {
+  content: none;
+}
+
+article .meta {
+  color: #666;
+}
+
+article .links a {
+  margin-right: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .year, article .meta, ul.tags li {
+    color: #999;
+  }
+  ul.tags li {
+    border-color: #444;
+  }
+}
+
+@media (max-width: 480px) {
+  .skills {
+    grid-template-columns: 1fr;
+  }
+  .skills dd {
+    margin-bottom: 0.5rem;
+  }
+}
+
+article .content table {
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+article .content th, article .content td {
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0.4rem 0.75rem 0.4rem 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+@media (prefers-color-scheme: dark) {
+  article .content th, article .content td {
+    border-bottom-color: #444;
+  }
+}
+
+/* Recent work: one recording plays on the stage, the reel shows stills */
+
+.showcase .stage img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3008 / 1700;
+  object-fit: cover;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #f4f4f4;
+}
+
+.showcase .stage figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.showcase .stage figcaption strong {
+  color: #333;
+}
+
+ul.reel {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+ul.reel li {
+  margin: 0;
+}
+
+ul.reel li:before {
+  content: none;
+}
+
+ul.reel button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+ul.reel button:hover,
+ul.reel button[aria-current="true"] {
+  opacity: 1;
+}
+
+ul.reel button[aria-current="true"] {
+  border-color: #333;
+}
+
+ul.reel img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3008 / 1700;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .showcase .stage img {
+    border-color: #444;
+    background: #2a2a2a;
+  }
+  .showcase .stage figcaption {
+    color: #999;
+  }
+  .showcase .stage figcaption strong {
+    color: #e0e0e0;
+  }
+  ul.reel button[aria-current="true"] {
+    border-color: #e0e0e0;
+  }
+}
+
+@media (max-width: 480px) {
+  ul.reel {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+ul.projects li.project a.write-up,
+ul.projects li.project a.external {
+  margin-left: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: normal;
+}
